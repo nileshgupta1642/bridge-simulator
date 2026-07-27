@@ -171,3 +171,44 @@ body {
 .wheel-right {
   right: 10px;
 }
+
+.bridge-sign {
+  position: absolute;
+  top: calc(50% - 125px);
+  z-index: 6;
+
+  padding: 7px 11px;
+
+  color: white;
+  background: #2f6f3e;
+  border: 3px solid white;
+  border-radius: 4px;
+
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  text-transform: uppercase;
+
+  transform: translateX(-50%);
+}
+
+.bridge-sign::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+
+  width: 5px;
+  height: 55px;
+
+  background: #555;
+  transform: translateX(-50%);
+}
+
+.entrance-sign {
+  left: 30%;
+}
+
+.exit-sign {
+  left: 70%;
+}
