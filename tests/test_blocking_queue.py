@@ -3,82 +3,112 @@ from threading import Event, Thread
 from bridge_simulator.blocking_queue import BlockingQueue
 
 
-def test_add_and_remove_car() -> None:
-    queue = BlockingQueue(capacity=2)
+def test_adds_and_removes_car_from_bridge() -> None:
+    bridge = BlockingQueue(capacity=2)
 
-    queue.add("car-1")
+    bridge.add("car-1")
 
-    assert queue.size() == 1
-    assert queue.remove() == "car-1"
-    assert queue.size() == 0
-
-
-def test_cars_are_removed_in_fifo_order() -> None:
-    queue = BlockingQueue(capacity=3)
-
-    queue.add("car-1")
-    queue.add("car-2")
-    queue.add("car-3")
-
-    assert queue.remove() == "car-1"
-    assert queue.remove() == "car-2"
-    assert queue.remove() == "car-3"
+    assert bridge.size() == 1
+    assert bridge.remove() == "car-1"
+    assert bridge.size() == 0
 
 
-def test_remove_blocks_when_queue_is_empty() -> None:
-    queue = BlockingQueue(capacity=1)
+def test_cars_exit_in_the_order_they_entered() -> None:
+    bridge = BlockingQueue(capacity=3)
 
-    removed_car = []
+    bridge.add("car-1")
+    bridge.add("car-2")
+    bridge.add("car-3")
+
+    assert bridge.remove() == "car-1"
+    assert bridge.remove() == "car-2"
+    assert bridge.remove() == "car-3"
+
+    assert bridge.size() == 0
+
+
+def test_remove_blocks_when_bridge_is_empty() -> None:
+    bridge = BlockingQueue(capacity=1)
+
+    removed_cars = []
     remove_finished = Event()
 
     def remove_car() -> None:
-        car = queue.remove()
-        removed_car.append(car)
+        car = bridge.remove()
+        removed_cars.append(car)
         remove_finished.set()
 
-    thread = Thread(target=remove_car, daemon=True)
+    thread = Thread(target=remove_car)
     thread.start()
 
-    # remove() should still be blocked because the queue is empty.
+    # The bridge is empty, so remove() should remain blocked.
     assert remove_finished.wait(timeout=0.1) is False
 
-    queue.add("car-1")
+    bridge.add("car-1")
 
-    # Adding a car should unblock remove().
+    # Adding a car should allow remove() to continue.
     assert remove_finished.wait(timeout=1) is True
 
     thread.join(timeout=1)
 
     assert thread.is_alive() is False
-    assert removed_car == ["car-1"]
-    assert queue.size() == 0
+    assert removed_cars == ["car-1"]
+    assert bridge.size() == 0
 
 
-def test_add_blocks_when_queue_is_full() -> None:
-    queue = BlockingQueue(capacity=1)
+def test_add_blocks_when_bridge_is_at_capacity() -> None:
+    bridge = BlockingQueue(capacity=1)
 
-    queue.add("car-1")
+    bridge.add("car-1")
 
     add_finished = Event()
 
-    def add_car() -> None:
-        queue.add("car-2")
+    def add_second_car() -> None:
+        bridge.add("car-2")
         add_finished.set()
 
-    thread = Thread(target=add_car, daemon=True)
+    thread = Thread(target=add_second_car)
     thread.start()
 
-    # add() should still be blocked because the queue is full.
+    # The bridge is full, so car-2 should remain blocked at the entrance.
     assert add_finished.wait(timeout=0.1) is False
-    assert queue.size() == 1
+    assert bridge.size() == 1
 
-    assert queue.remove() == "car-1"
+    assert bridge.remove() == "car-1"
 
-    # Removing car-1 creates space and should unblock add().
+    # Removing car-1 creates a bridge space for car-2.
     assert add_finished.wait(timeout=1) is True
 
     thread.join(timeout=1)
 
     assert thread.is_alive() is False
-    assert queue.size() == 1
-    assert queue.remove() == "car-2"
+    assert bridge.size() == 1
+    assert bridge.remove() == "car-2"
+
+
+def test_bridge_never_exceeds_capacity() -> None:
+    bridge = BlockingQueue(capacity=2)
+
+    bridge.add("car-1")
+    bridge.add("car-2")
+
+    third_car_entered = Event()
+
+    def add_third_car() -> None:
+        bridge.add("car-3")
+        third_car_entered.set()
+
+    thread = Thread(target=add_third_car)
+    thread.start()
+
+    assert third_car_entered.wait(timeout=0.1) is False
+    assert bridge.size() == 2
+
+    bridge.remove()
+
+    assert third_car_entered.wait(timeout=1) is True
+
+    thread.join(timeout=1)
+
+    assert thread.is_alive() is False
+    assert bridge.size() == 2
