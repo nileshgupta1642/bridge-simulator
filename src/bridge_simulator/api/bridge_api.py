@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from bridge_simulator.blocking_queue import SimulationRestarted
 from bridge_simulator.services.bridge_service import BridgeService
 
 
@@ -30,10 +32,20 @@ def create_app(
         allow_headers=["*"],
     )
 
+    @app.exception_handler(SimulationRestarted)
+    async def simulation_restarted(
+        request: Request,
+        exception: SimulationRestarted,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={"detail": "Simulation restarted"},
+        )
+
     @app.post("/bridge/enter")
-    def enter_bridge(request: EnterBridgeRequest) -> dict:
-        # Blocks here if the bridge is currently at capacity.
-        service.enter(request.car_id)
+    async def enter_bridge(request: EnterBridgeRequest) -> dict:
+        # Waits without occupying a worker if the bridge is at capacity.
+        await service.enter(request.car_id)
 
         return {
             "car_id": request.car_id,
@@ -41,9 +53,9 @@ def create_app(
         }
 
     @app.post("/bridge/exit")
-    def exit_bridge() -> dict:
-        # Blocks here if there are no cars on the bridge.
-        car_id = service.exit()
+    async def exit_bridge() -> dict:
+        # Waits without occupying a worker if there are no cars on the bridge.
+        car_id = await service.exit()
 
         return {
             "car_id": car_id,
@@ -51,8 +63,14 @@ def create_app(
         }
 
     @app.get("/bridge/status")
-    def get_bridge_status() -> dict:
-        return service.get_status()
+    async def get_bridge_status() -> dict:
+        return await service.get_status()
+
+    @app.post("/bridge/restart")
+    async def restart_bridge() -> dict:
+        await service.restart()
+
+        return {"status": "restarted"}
 
     return app
 

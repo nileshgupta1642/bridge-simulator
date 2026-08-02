@@ -21,6 +21,26 @@ body {
   overflow: hidden;
 }
 
+.restart-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  padding: 10px 14px;
+  color: white;
+  background: #2f6f3e;
+  border: 2px solid white;
+  border-radius: 4px;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.restart-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .water {
   position: absolute;
   inset: 0;
@@ -126,7 +146,7 @@ body {
   bottom: 7px;
   width: 72px;
   height: 25px;
-  background: #d94841;
+  background: var(--car-color, #d94841);
   border: 3px solid #222;
   border-radius: 9px 12px 6px 6px;
 }
@@ -137,7 +157,7 @@ body {
   bottom: 29px;
   width: 37px;
   height: 17px;
-  background: #d94841;
+  background: var(--car-color, #d94841);
   border: 3px solid #222;
   border-bottom: 0;
   border-radius: 12px 12px 0 0;
